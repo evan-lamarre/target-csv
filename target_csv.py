@@ -34,14 +34,14 @@ def flatten(d, parent_key='', sep='__'):
         else:
             items.append((new_key, str(v) if type(v) is list else v))
     return dict(items)
-        
+
 def persist_lines(delimiter, quotechar, lines):
     state = None
     schemas = {}
     key_properties = {}
     headers = {}
     validators = {}
-    
+
     now = datetime.now().strftime('%Y%m%dT%H%M%S')
 
     for line in lines:
@@ -68,7 +68,7 @@ def persist_lines(delimiter, quotechar, lines):
             file_is_empty = (not os.path.isfile(filename)) or os.stat(filename).st_size == 0
 
             flattened_record = flatten(o['record'])
-            
+
             if o['stream'] not in headers and not file_is_empty:
                 with open(filename, 'r') as csvfile:
                     reader = csv.reader(csvfile,
@@ -78,17 +78,17 @@ def persist_lines(delimiter, quotechar, lines):
                     headers[o['stream']] = first_line if first_line else flattened_record.keys()
             else:
                 headers[o['stream']] = flattened_record.keys()
-            
+
             with open(filename, 'a') as csvfile:
-                writer = csv.DictWriter(csvfile,                                        
+                writer = csv.DictWriter(csvfile,
                                         headers[o['stream']],
                                         extrasaction='ignore',
                                         delimiter=delimiter,
                                         quotechar=quotechar)
                 if file_is_empty:
                     writer.writeheader()
-                    
-                writer.writerow(flattened_record)    
+
+                writer.writerow(flattened_record)
 
             state = None
         elif t == 'STATE':
@@ -104,9 +104,9 @@ def persist_lines(delimiter, quotechar, lines):
                 raise Exception("key_properties field is required")
             key_properties[stream] = o['key_properties']
         else:
-            raise Exception("Unknown message type {} in message {}"
-                            .format(o['type'], o))
-    
+            logger.warn(("Unknown message type {} in message {}"
+                            .format(o['type'], o)))
+
     return state
 
 
@@ -150,7 +150,7 @@ def main():
     state = persist_lines(config.get('delimiter', ','),
                           config.get('quotechar', '"'),
                           input)
-        
+
     emit_state(state)
     logger.debug("Exiting normally")
 
